@@ -14,7 +14,7 @@ def main():
         "--boundary_condition",
         help="Boundary condition number",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6],
+        choices=[1, 2, 3, 4, 5, 6, 7],
         default=1,
     )
     parser.add_argument(

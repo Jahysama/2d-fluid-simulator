@@ -192,6 +192,8 @@ def get_boundary_condition(num, resolution, no_dye):
         boundary_condition = create_boundary_condition5(resolution, no_dye)
     elif num == 6:
         boundary_condition = create_boundary_condition6(resolution, no_dye)
+    elif num == 7:  # Add new condition
+        boundary_condition = create_boundary_condition7(resolution, no_dye)
     else:
         raise NotImplementedError
 
@@ -482,6 +484,54 @@ def create_boundary_condition6(resolution, no_dye=False):
     set_inflow()
     set_outflow()
     set_wall()
+
+    if no_dye:
+        boundary_condition = BoundaryCondition(bc, bc_mask)
+    else:
+        boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
+
+    return boundary_condition
+
+def create_boundary_condition7(resolution, no_dye=False):
+    """Creates a boundary condition with smooth fluid behavior and strategic holes"""
+    x_res, y_res = 2 * resolution, resolution
+    bc, bc_mask, bc_dye = create_bc_array(x_res, y_res)
+    
+    # Flow parameters
+    inlet_width = y_res // 6
+    
+    def set_inlet():
+        # Top-left inlet
+        for i in range(x_res // 8):
+            for j in range(inlet_width):
+                y_pos = y_res - j - 2
+                if 0 <= y_pos < y_res and y_pos < y_res - 2:
+                    bc[i, y_pos] = np.array([0.4, -0.2])
+                    bc_mask[i, y_pos] = 2
+                    bc_dye[i, y_pos] = np.array([0.5, 0.0, 1.0])
+
+    def set_walls():
+        # Top and bottom walls
+        set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 3))  # Bottom wall
+        set_plane(bc, bc_mask, bc_dye, (0, y_res-3), (x_res, y_res))  # Top wall
+        
+        # Side walls with gaps
+        # Left wall sections
+        set_plane(bc, bc_mask, bc_dye, (0, 0), (2, y_res//3))
+        set_plane(bc, bc_mask, bc_dye, (0, 2*y_res//3), (2, y_res))
+        
+        # Right wall sections
+        set_plane(bc, bc_mask, bc_dye, (x_res-2, 0), (x_res, y_res//2 - y_res//8))
+        set_plane(bc, bc_mask, bc_dye, (x_res-2, y_res//2 + y_res//8), (x_res, y_res))
+
+    def set_outflow():
+        # Outflow zone
+        bc[-3:, :] = np.array([0.0, 0.0])
+        bc_mask[-3:, :] = 3
+
+    set_inlet()
+    set_walls()
+    set_outflow()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
